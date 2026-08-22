@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from app.api.analyze import router as analyze_router
+from app.api.health import router as health_router
 
 app = FastAPI(
     title="AI DevOps Copilot",
@@ -11,6 +12,7 @@ app = FastAPI(
 )
 
 app.include_router(analyze_router)
+app.include_router(health_router)
 
 
 @app.get("/health")
