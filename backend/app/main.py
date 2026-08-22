@@ -2,11 +2,15 @@
 
 from fastapi import FastAPI
 
+from app.api.analyze import router as analyze_router
+
 app = FastAPI(
     title="AI DevOps Copilot",
     version="0.1.0",
     description="AI-powered engineering intelligence for GitHub repositories.",
 )
+
+app.include_router(analyze_router)
 
 
 @app.get("/health")
