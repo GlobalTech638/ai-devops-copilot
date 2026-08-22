@@ -1,30 +1,28 @@
-"""AI analysis boundary.
+"""Provider-neutral AI analysis contract.
 
-The service intentionally separates prompt/context construction from the model
-provider. This lets us add an LLM provider without coupling the API to one vendor.
+The core application does not depend on one model vendor. A provider adapter can
+implement ``AIAnalyzer`` and consume the bounded context produced by the context
+builder. Until a provider is configured, deterministic evidence is returned.
 """
+
+from typing import Protocol
 
 from app.models.findings import AnalysisResult, Finding
 
-
 SYSTEM_PROMPT = """You are an expert software engineering reviewer.
-Analyze repository evidence conservatively. Never invent evidence.
-Return structured findings with category, severity, title, evidence,
-recommendation, and confidence. Prioritize actionable risks."""
+Analyze only supplied repository evidence. Never invent files, behavior, CVEs, or
+vulnerabilities. Every finding must cite concrete evidence. Prioritize correctness,
+security, reliability, maintainability, and testability. Return structured findings
+with severity, confidence, evidence, and remediation."""
 
 
-def build_analysis_context(paths: list[str], findings: list[dict]) -> str:
-    """Build a compact, deterministic context payload for an AI provider."""
-    return (
-        "Repository paths:\n"
-        + "\n".join(f"- {path}" for path in paths)
-        + "\n\nExisting deterministic findings:\n"
-        + "\n".join(f"- {item}" for item in findings)
-    )
+class AIAnalyzer(Protocol):
+    def analyze(self, context: str) -> AnalysisResult:
+        """Analyze bounded repository context."""
 
 
 def fallback_analysis(findings: list[dict]) -> AnalysisResult:
-    """Return a valid result when no AI provider is configured yet."""
+    """Return useful structured findings when no external model is configured."""
     structured = [
         Finding(
             category=item.get("category", "engineering"),
