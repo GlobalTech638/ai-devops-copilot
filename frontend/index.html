@@ -15,64 +15,28 @@
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">✦</div><div><strong>DevOps Copilot</strong><span>Engineering intelligence</span></div></div>
       <nav>
-        <a class="active" href="#overview">Overview</a>
-        <a href="#findings">Findings</a>
-        <a href="#repositories">Repositories</a>
-        <a href="#pull-requests">Pull requests</a>
-        <a href="#activity">Activity</a>
+        <a class="active" href="#overview">Overview</a><a href="#findings">Findings</a><a href="#repositories">Repositories</a><a href="#pull-requests">Pull requests</a><a href="#activity">Activity</a>
       </nav>
       <div class="sidebar-bottom"><div class="status-dot"></div><span>AI engine ready</span><button id="themeBtn" aria-label="Toggle theme">◐</button></div>
     </aside>
-
     <main class="main">
-      <header class="topbar">
-        <div><p class="eyebrow">ENGINEERING CONTROL PLANE</p><h1>Good morning, GlobalTech.</h1><p class="muted">One view of code health, risk, and what deserves attention next.</p></div>
-        <button class="primary" id="analyzeBtn">＋ Analyze repository</button>
-      </header>
-
-      <section class="repo-strip" id="repositories">
-        <div class="repo-icon">GH</div><div class="repo-meta"><strong>GlobalTech638 / ai-devops-copilot</strong><span>develop · Last analysis 8 min ago</span></div><span class="pill success">Connected</span><button class="ghost">Change</button>
-      </section>
-
+      <header class="topbar"><div><p class="eyebrow">ENGINEERING CONTROL PLANE</p><h1>Good morning, GlobalTech.</h1><p class="muted">One view of code health, risk, and what deserves attention next.</p></div><button class="primary" id="analyzeBtn">＋ Analyze repository</button></header>
+      <section class="repo-strip" id="repositories"><div class="repo-icon">GH</div><div class="repo-meta"><strong id="repoName">GlobalTech638 / ai-devops-copilot</strong><span id="repoStatus">develop · Ready for analysis</span></div><span class="pill success">Connected</span><button class="ghost">Change</button></section>
       <section class="metrics" id="overview">
-        <article class="metric-card health"><span>Engineering health</span><div class="metric-value">82<small>/100</small></div><div class="trend up">↑ 6.4% <em>vs last scan</em></div><div class="spark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
-        <article class="metric-card"><span>Open findings</span><div class="metric-value">17</div><div class="breakdown"><b>3</b> high <b>8</b> medium <b>6</b> low</div></article>
-        <article class="metric-card"><span>Security posture</span><div class="metric-value">A−</div><div class="trend up">No critical issues <em>detected</em></div></article>
-        <article class="metric-card"><span>Test coverage signal</span><div class="metric-value">74%</div><div class="trend warn">Needs attention <em>+12 pts possible</em></div></article>
+        <article class="metric-card health"><span>Engineering health</span><div class="metric-value" id="healthValue">—<small>/100</small></div><div class="trend up" id="healthTrend">Run an analysis <em>to calculate</em></div><div class="spark"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></article>
+        <article class="metric-card"><span>Open findings</span><div class="metric-value" id="findingCount">—</div><div class="breakdown" id="findingBreakdown">Waiting for analysis</div></article>
+        <article class="metric-card"><span>Security posture</span><div class="metric-value" id="securityValue">—</div><div class="trend up" id="securityTrend">Evidence-based <em>after scan</em></div></article>
+        <article class="metric-card"><span>Test coverage signal</span><div class="metric-value" id="testValue">—</div><div class="trend warn">Repository signal <em>after scan</em></div></article>
       </section>
-
       <section class="content-grid">
-        <article class="panel findings-panel" id="findings">
-          <div class="panel-head"><div><h2>Priority findings</h2><p class="muted">AI-ranked by impact × confidence</p></div><button class="text-btn">View all →</button></div>
-          <div class="finding critical"><span class="severity-dot critical-dot"></span><div><strong>Authentication boundary needs review</strong><p>Potential missing authorization check in <code>api/users.py:42</code></p></div><span class="confidence">96%</span></div>
-          <div class="finding high"><span class="severity-dot high-dot"></span><div><strong>Database query should be parameterized</strong><p>User-controlled input reaches a query construction path.</p></div><span class="confidence">93%</span></div>
-          <div class="finding medium"><span class="severity-dot medium-dot"></span><div><strong>Critical service path lacks tests</strong><p>No obvious coverage around <code>services/payment.py</code>.</p></div><span class="confidence">88%</span></div>
-          <div class="finding low"><span class="severity-dot low-dot"></span><div><strong>Container image can be slimmed</strong><p>Build context includes unnecessary development dependencies.</p></div><span class="confidence">81%</span></div>
-        </article>
-
-        <article class="panel score-panel">
-          <div class="panel-head"><div><h2>Health trajectory</h2><p class="muted">Last 7 analyses</p></div><span class="pill">+12 pts</span></div>
-          <div class="chart"><div class="chart-line"></div><div class="chart-point p1"></div><div class="chart-point p2"></div><div class="chart-point p3"></div><div class="chart-point p4"></div><div class="chart-point p5"></div><div class="chart-point p6"></div><div class="chart-point p7"></div></div>
-          <div class="chart-labels"><span>Aug 18</span><span>Aug 24</span></div>
-        </article>
-
-        <article class="panel activity-panel" id="activity">
-          <div class="panel-head"><div><h2>Recent activity</h2><p class="muted">What Copilot has been doing</p></div></div>
-          <div class="activity"><span class="activity-icon">✦</span><div><strong>Analysis completed</strong><p>ai-devops-copilot · develop</p></div><time>8m</time></div>
-          <div class="activity"><span class="activity-icon">✓</span><div><strong>CI workflow passed</strong><p>Backend tests · 14 tests</p></div><time>21m</time></div>
-          <div class="activity"><span class="activity-icon">!</span><div><strong>3 findings resolved</strong><p>PR #18 · cleanup pass</p></div><time>1h</time></div>
-        </article>
-
-        <article class="panel quick-panel" id="pull-requests">
-          <div class="panel-head"><div><h2>PR intelligence</h2><p class="muted">Review risk before merge</p></div><span class="ai-badge">AI</span></div>
-          <div class="pr-score"><div class="ring"><span>91</span></div><div><strong>Low merge risk</strong><p>PR #18 · Refactor analysis pipeline</p><span class="muted">4 files · 2,184 additions</span></div></div>
-          <button class="secondary">Review pull request →</button>
-        </article>
+        <article class="panel findings-panel" id="findings"><div class="panel-head"><div><h2>Priority findings</h2><p class="muted">AI-ranked by impact × confidence</p></div><button class="text-btn">View all →</button></div><div id="findingsList"><div class="empty-state">Run an analysis to surface evidence-backed engineering findings.</div></div></article>
+        <article class="panel score-panel"><div class="panel-head"><div><h2>Health trajectory</h2><p class="muted">Stored analysis history</p></div><span class="pill" id="trajectoryPill">Live</span></div><div class="chart"><div class="chart-line"></div><div class="chart-point p1"></div><div class="chart-point p2"></div><div class="chart-point p3"></div><div class="chart-point p4"></div><div class="chart-point p5"></div><div class="chart-point p6"></div><div class="chart-point p7"></div></div><div class="chart-labels"><span>Previous</span><span>Current</span></div></article>
+        <article class="panel activity-panel" id="activity"><div class="panel-head"><div><h2>Recent activity</h2><p class="muted">What Copilot has been doing</p></div></div><div id="activityList"><div class="activity"><span class="activity-icon">○</span><div><strong>No analyses yet</strong><p>Start your first repository scan.</p></div><time>now</time></div></div></article>
+        <article class="panel quick-panel" id="pull-requests"><div class="panel-head"><div><h2>PR intelligence</h2><p class="muted">Review risk before merge</p></div><span class="ai-badge">AI</span></div><div class="pr-score"><div class="ring"><span>—</span></div><div><strong>Awaiting PR analysis</strong><p>Connect a pull request for merge-risk scoring.</p></div></div><button class="secondary">PR review →</button></article>
       </section>
     </main>
   </div>
-
-  <div class="modal hidden" id="analyzeModal"><div class="modal-card"><button class="close" id="closeModal">×</button><p class="eyebrow">NEW ANALYSIS</p><h2>Analyze a repository</h2><p class="muted">Connect a GitHub repository and let Copilot build an evidence-based engineering report.</p><label>Repository<input id="repoInput" value="GlobalTech638/ai-devops-copilot" placeholder="owner/repository" /></label><label>Branch<input value="develop" placeholder="main" /></label><button class="primary full" id="startAnalysis">Start analysis ✦</button></div></div>
+  <div class="modal hidden" id="analyzeModal"><div class="modal-card"><button class="close" id="closeModal">×</button><p class="eyebrow">NEW ANALYSIS</p><h2>Analyze a repository</h2><p class="muted">Start an evidence-based engineering scan. Results will replace the dashboard placeholders.</p><label>Repository<input id="repoInput" value="GlobalTech638/ai-devops-copilot" placeholder="owner/repository" /></label><label>Branch<input id="branchInput" value="develop" placeholder="main" /></label><button class="primary full" id="startAnalysis">Start analysis ✦</button><p class="modal-error" id="modalError"></p></div></div>
   <script src="./app.js"></script>
 </body>
 </html>
