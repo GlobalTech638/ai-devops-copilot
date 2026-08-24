@@ -1,11 +1,8 @@
-"""OpenAI-backed semantic repository analyzer.
-
-The adapter is optional: without OPENAI_API_KEY the application keeps using the
-safe deterministic baseline analyzer.
-"""
+"""OpenAI-backed semantic repository analyzer."""
 
 import json
 import os
+from typing import Any
 
 from app.models.findings import AnalysisResult
 from app.services.ai_analyzer import SYSTEM_PROMPT
@@ -17,11 +14,10 @@ class OpenAIAnalyzer:
     def __init__(self, model: str | None = None) -> None:
         self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
         self.api_key = os.getenv("OPENAI_API_KEY")
-
-    def analyze(self, context: str) -> AnalysisResult:
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured")
 
+    def analyze(self, context: str) -> AnalysisResult:
         from openai import OpenAI
 
         client = OpenAI(api_key=self.api_key)
@@ -38,4 +34,13 @@ class OpenAIAnalyzer:
                 "schema": AnalysisResult.model_json_schema(),
             }},
         )
-        return AnalysisResult.model_validate(json.loads(response.output_text))
+        return _parse_result(response.output_text)
+
+
+def _parse_result(output: str) -> AnalysisResult:
+    """Validate model output at the application boundary."""
+    try:
+        payload: Any = json.loads(output)
+    except json.JSONDecodeError as exc:
+        raise ValueError("AI provider returned invalid JSON") from exc
+    return AnalysisResult.model_validate(payload)
