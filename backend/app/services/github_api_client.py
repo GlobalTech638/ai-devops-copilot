@@ -1,6 +1,7 @@
 """GitHub REST implementation for repository and pull-request analysis."""
 
 import base64
+import json
 import os
 from urllib.error import HTTPError
 from urllib.parse import quote
@@ -20,7 +21,7 @@ class GitHubApiClient:
     def __init__(self, token: str | None = None) -> None:
         self.token = token or os.getenv("GITHUB_TOKEN")
 
-    def _get(self, path: str, accept: str = "application/vnd.github+json") -> dict | str:
+    def _request(self, method: str, path: str, accept: str = "application/vnd.github+json", payload: dict | None = None) -> dict | str:
         headers = {
             "Accept": accept,
             "X-GitHub-Api-Version": API_VERSION,
@@ -28,14 +29,16 @@ class GitHubApiClient:
         }
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
-        request = Request(f"{API_BASE}{path}", headers=headers, method="GET")
+        body = json.dumps(payload).encode() if payload is not None else None
+        if body is not None:
+            headers["Content-Type"] = "application/json"
+        request = Request(f"{API_BASE}{path}", headers=headers, method=method, data=body)
         try:
             with urlopen(request, timeout=20) as response:
-                body = response.read().decode("utf-8")
-                if "diff" in accept:
-                    return body
-                import json
-                return json.loads(body)
+                raw = response.read().decode("utf-8")
+                if accept == "application/vnd.github.v3.diff":
+                    return raw
+                return json.loads(raw) if raw else {}
         except HTTPError as exc:
             if exc.code == 404:
                 raise GitHubApiError("GitHub repository, ref, file, or pull request was not found") from exc
@@ -43,12 +46,14 @@ class GitHubApiClient:
                 raise GitHubApiError("GitHub authentication failed") from exc
             if exc.code == 403:
                 raise GitHubApiError("GitHub access denied or rate limit reached") from exc
+            if exc.code == 422:
+                raise GitHubApiError("GitHub rejected the request") from exc
             raise GitHubApiError(f"GitHub API request failed ({exc.code})") from exc
 
     def list_tree(self, repository: str, ref: str) -> list[dict]:
         owner, name = _split_repository(repository)
         encoded_ref = quote(ref, safe="")
-        payload = self._get(f"/repos/{owner}/{name}/git/trees/{encoded_ref}?recursive=1")
+        payload = self._request("GET", f"/repos/{owner}/{name}/git/trees/{encoded_ref}?recursive=1")
         if not isinstance(payload, dict):
             raise GitHubApiError("Unexpected GitHub tree response")
         if payload.get("truncated"):
@@ -59,10 +64,8 @@ class GitHubApiClient:
         owner, name = _split_repository(repository)
         encoded_path = quote(path, safe="/")
         encoded_ref = quote(ref, safe="")
-        payload = self._get(f"/repos/{owner}/{name}/contents/{encoded_path}?ref={encoded_ref}")
-        if not isinstance(payload, dict):
-            raise GitHubApiError("Unexpected GitHub content response")
-        if payload.get("type") != "file":
+        payload = self._request("GET", f"/repos/{owner}/{name}/contents/{encoded_path}?ref={encoded_ref}")
+        if not isinstance(payload, dict) or payload.get("type") != "file":
             raise GitHubApiError(f"GitHub path is not a regular file: {path}")
         if payload.get("encoding") != "base64":
             raise GitHubApiError(f"Unsupported GitHub content encoding for: {path}")
@@ -73,13 +76,43 @@ class GitHubApiClient:
         owner, name = _split_repository(repository)
         if pull_request <= 0:
             raise GitHubApiError("Pull request number must be positive")
-        encoded = quote(f"/repos/{owner}/{name}/pulls/{pull_request}", safe="/")
-        patch = self._get(encoded, accept="application/vnd.github.v3.diff")
+        patch = self._request("GET", f"/repos/{owner}/{name}/pulls/{pull_request}", accept="application/vnd.github.v3.diff")
         if not isinstance(patch, str):
             raise GitHubApiError("Unexpected GitHub pull-request diff response")
         if len(patch) > 2_000_000:
             raise GitHubApiError("Pull-request diff exceeds the analysis limit")
         return patch
+
+    def add_pull_request_review(
+        self,
+        repository: str,
+        pull_request: int,
+        *,
+        action: str,
+        review: str,
+        file_comments: list,
+        commit_id: str | None = None,
+    ) -> dict:
+        owner, name = _split_repository(repository)
+        if action not in {"COMMENT", "REQUEST_CHANGES", "APPROVE"}:
+            raise GitHubApiError("Unsupported GitHub review action")
+        if not self.token:
+            raise GitHubApiError("GITHUB_TOKEN is required to publish a GitHub review")
+        comments = []
+        for item in file_comments:
+            comments.append({
+                "path": item.path,
+                "line": item.line,
+                "side": item.side,
+                "body": item.body,
+            })
+        payload = {"body": review, "event": action, "comments": comments}
+        if commit_id:
+            payload["commit_id"] = commit_id
+        result = self._request("POST", f"/repos/{owner}/{name}/pulls/{pull_request}/reviews", payload=payload)
+        if not isinstance(result, dict):
+            raise GitHubApiError("Unexpected GitHub review response")
+        return result
 
 
 def _split_repository(repository: str) -> tuple[str, str]:
