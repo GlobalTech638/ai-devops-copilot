@@ -3,6 +3,8 @@
 from enum import Enum
 from pydantic import BaseModel, Field
 
+from app.models.findings import AnalysisResult
+
 
 class JobStatus(str, Enum):
     QUEUED = "queued"
@@ -20,3 +22,4 @@ class AnalysisJob(BaseModel):
     status: JobStatus = JobStatus.QUEUED
     progress: int = Field(default=0, ge=0, le=100)
     error: str | None = None
+    result: AnalysisResult | None = None
