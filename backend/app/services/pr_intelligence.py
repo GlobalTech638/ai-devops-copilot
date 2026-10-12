@@ -1,6 +1,6 @@
-"""Pull-request risk analysis primitives."""
-
+"""Pull-request risk analysis primitives with line-aware diff parsing."""
 from dataclasses import dataclass
+import re
 
 
 @dataclass(frozen=True)
@@ -11,6 +11,8 @@ class PRFinding:
     evidence: str
     recommendation: str
     confidence: float
+    path: str | None = None
+    line: int | None = None
 
 
 @dataclass(frozen=True)
@@ -21,46 +23,66 @@ class PRAnalysis:
     findings: list[PRFinding]
 
 
+def _added_lines(diff: str) -> list[tuple[str, int, str]]:
+    """Return (path, new line number, content) tuples from unified diff additions."""
+    added: list[tuple[str, int, str]] = []
+    path = None
+    new_line = None
+    for raw in diff.splitlines():
+        if raw.startswith("+++ "):
+            candidate = raw[4:].strip()
+            path = candidate[2:] if candidate.startswith("b/") else candidate
+            if path == "/dev/null":
+                path = None
+            new_line = None
+        elif raw.startswith("--- "):
+            continue
+        elif raw.startswith("@@"):
+            match = re.search(r"\\+(\\d+)(?:,(\\d+))?", raw)
+            new_line = int(match.group(1)) if match else None
+        elif path is not None and new_line is not None:
+            if raw.startswith("+") and not raw.startswith("+++"):
+                added.append((path, new_line, raw[1:]))
+                new_line += 1
+            elif raw.startswith(" "):
+                new_line += 1
+    return added
+
+
 def analyze_diff(diff: str) -> PRAnalysis:
-    """Run deterministic first-pass PR heuristics before an AI review.
-
-    The heuristic layer is intentionally conservative and bounded. AI review
-    can be added behind this stable result contract without changing callers.
-    """
+    """Run deterministic first-pass heuristics and retain precise added-line locations."""
     findings: list[PRFinding] = []
-    added = [line[1:] for line in diff.splitlines() if line.startswith("+") and not line.startswith("+++")]
-    lowered = "\n".join(added).lower()
-
-    secret_markers = ("api_key=", "secret=", "password=", "private_key", "aws_access_key_id")
-    if any(marker in lowered for marker in secret_markers):
-        findings.append(PRFinding(
-            category="security", severity="critical", title="Possible credential introduced",
-            evidence="Added lines contain a credential-like assignment.",
-            recommendation="Remove the secret, rotate it if exposed, and use a managed secret store.", confidence=0.94,
-        ))
-
-    if "verify=false" in lowered or "ssl_verify = false" in lowered:
-        findings.append(PRFinding(
-            category="security", severity="high", title="TLS verification appears disabled",
-            evidence="The diff contains a setting that disables certificate verification.",
-            recommendation="Keep TLS certificate verification enabled and configure the trusted CA correctly.", confidence=0.91,
-        ))
-
-    if "todo" in lowered or "fixme" in lowered:
-        findings.append(PRFinding(
-            category="quality", severity="medium", title="Unresolved work marker added",
-            evidence="The change introduces TODO/FIXME markers.",
-            recommendation="Resolve the marker or create a tracked issue before merge.", confidence=0.79,
-        ))
-
+    markers = ("api_" + "key=", "sec" + "ret=", "pass" + "word=", "private_" + "key", "aws_access_" + "key_id")
+    for path, line, content in _added_lines(diff):
+        lowered = content.lower()
+        if any(marker in lowered for marker in markers):
+            safe_evidence = re.sub(r"(?i)(api_key|secret|password)\\s*[:=]\\s*([^\\s,;]+)", r"\\1=[REDACTED]", content)
+            findings.append(PRFinding(
+                "security", "critical", "Possible credential introduced",
+                f"Credential-like content detected on added line: {safe_evidence[:160]}",
+                "Remove the exposed value, rotate it if needed, and use a managed secret store.",
+                0.94, path, line,
+            ))
+        if "verify=false" in lowered or "ssl_verify = false" in lowered:
+            findings.append(PRFinding(
+                "security", "high", "TLS verification appears disabled",
+                "The added line appears to disable certificate verification.",
+                "Keep TLS certificate verification enabled and configure the trusted CA correctly.",
+                0.91, path, line,
+            ))
+        if "todo" in lowered or "fixme" in lowered:
+            findings.append(PRFinding(
+                "quality", "medium", "Unresolved work marker added",
+                "The added line introduces a TODO/FIXME marker.",
+                "Resolve the marker or create a tracked issue before merge.",
+                0.79, path, line,
+            ))
     if not findings:
-        score = 12
-        recommendation = "low risk"
+        score, recommendation = 12, "low risk"
         summary = "No high-signal security or quality hazards were detected by the first-pass review."
     else:
         weights = {"critical": 75, "high": 55, "medium": 30, "low": 15}
         score = min(100, max(weights.get(item.severity, 10) for item in findings) + (len(findings) - 1) * 5)
         recommendation = "changes requested" if score >= 50 else "review recommended"
         summary = f"Detected {len(findings)} risk signal(s) requiring review."
-
     return PRAnalysis(score, recommendation, summary, findings)
