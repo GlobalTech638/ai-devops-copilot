@@ -33,6 +33,9 @@ def publish_review(
     if dry_run:
         return {"dry_run": True, "payload": payload}
 
+    if plan.comments and not commit_id:
+        raise ReviewPublishError("commit_id (the pull request head SHA) is required for inline comments")
+
     if plan.recommendation not in {"COMMENT", "REQUEST_CHANGES"}:
         raise ReviewPublishError("Unsupported review action")
 
