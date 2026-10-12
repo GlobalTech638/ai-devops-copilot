@@ -38,7 +38,7 @@ def _added_lines(diff: str) -> list[tuple[str, int, str]]:
         elif raw.startswith("--- "):
             continue
         elif raw.startswith("@@"):
-            match = re.search(r"\\+(\\d+)(?:,(\\d+))?", raw)
+            match = re.search(r"\+(\d+)(?:,(\d+))?", raw)
             new_line = int(match.group(1)) if match else None
         elif path is not None and new_line is not None:
             if raw.startswith("+") and not raw.startswith("+++"):
@@ -56,7 +56,7 @@ def analyze_diff(diff: str) -> PRAnalysis:
     for path, line, content in _added_lines(diff):
         lowered = content.lower()
         if any(marker in lowered for marker in markers):
-            safe_evidence = re.sub(r"(?i)(api_key|secret|password)\\s*[:=]\\s*([^\\s,;]+)", r"\\1=[REDACTED]", content)
+            safe_evidence = re.sub(r"(?i)(api_key|secret|password)\s*[:=]\s*([^\s,;]+)", r"\1=[REDACTED]", content)
             findings.append(PRFinding(
                 "security", "critical", "Possible credential introduced",
                 f"Credential-like content detected on added line: {safe_evidence[:160]}",
