@@ -19,7 +19,7 @@ class CreateJobRequest(BaseModel):
         default="main",
         min_length=1,
         max_length=255,
-        pattern=r"^[A-Za-z0-9_./-]+$",
+        pattern=r"^(?!.*\.\.)(?!/)(?!.*//)(?!.*\/$)[A-Za-z0-9_./-]+$",
         description="Git branch, tag, or commit ref",
     )
 
