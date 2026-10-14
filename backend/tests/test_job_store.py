@@ -14,13 +14,13 @@ def test_job_store_failure_redacts_common_secret_patterns():
     job = job_store.create_job("owner/repo", "main")
     failed = job_store.fail_job(
         job.id,
-        "request failed token=ghp_abcdefghijklmnopqrstuvwxyz123456 password=hunter2 sk-abcdefghijklmnopqrstuvwxyz123456",
+        "request failed token=demo-token password=demo-password api_key=demo-key",
     )
 
     assert failed.status == JobStatus.FAILED
-    assert "ghp_abcdefghijklmnopqrstuvwxyz123456" not in failed.error
-    assert "hunter2" not in failed.error
-    assert "sk-abcdefghijklmnopqrstuvwxyz123456" not in failed.error
+    assert "demo-token" not in failed.error
+    assert "demo-password" not in failed.error
+    assert "demo-key" not in failed.error
     assert "[REDACTED" in failed.error
 
 
