@@ -12,7 +12,7 @@ class OpenAIAnalyzer:
     """Analyze bounded repository context with the OpenAI Responses API."""
 
     def __init__(self, model: str | None = None) -> None:
-        self.model = model or os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
+        self.model = model or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
         self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured")
