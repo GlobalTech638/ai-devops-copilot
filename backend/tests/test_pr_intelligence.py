@@ -27,7 +27,7 @@ def test_findings_have_exact_inline_locations_and_redact_credentials():
     assert credential.path == "app/config.py"
     assert credential.line == 2
     assert "dont-print-this" not in credential.evidence
-    assert "[REDACTED]" in credential.evidence
+    assert "intentionally omitted" in credential.evidence
 
     tls = analysis.findings[1]
     assert tls.path == "app/config.py"
