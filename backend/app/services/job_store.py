@@ -107,3 +107,33 @@ def _safe_error(error: str) -> str:
     value = re.sub(r"gh[pousr]_[A-Za-z0-9_]{20,}", "[REDACTED_GITHUB_TOKEN]", value)
     value = re.sub(r"sk-[A-Za-z0-9_-]{16,}", "[REDACTED_API_KEY]", value)
     return value[:300]
+
+
+def recover_interrupted_jobs() -> int:
+    """Mark non-terminal jobs as failed after an application restart.
+
+    Background tasks are process-local in this MVP. A job left queued or in a
+    processing state cannot safely resume without a durable task queue.
+    Returns the number of jobs recovered.
+    """
+    recovered = 0
+    with _LOCK, closing(_connect()) as connection:
+        rows = connection.execute(
+            "SELECT payload FROM analysis_jobs"
+        ).fetchall()
+        for (payload,) in rows:
+            job = AnalysisJob.model_validate_json(payload)
+            if job.status in {JobStatus.COMPLETED, JobStatus.FAILED}:
+                continue
+            updated = job.model_copy(update={
+                "status": JobStatus.FAILED,
+                "progress": 100,
+                "error": "Analysis was interrupted by an application restart. Please submit a new job.",
+            })
+            connection.execute(
+                "UPDATE analysis_jobs SET payload = ? WHERE id = ?",
+                (updated.model_dump_json(), updated.id),
+            )
+            recovered += 1
+        connection.commit()
+    return recovered
