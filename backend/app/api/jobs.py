@@ -1,7 +1,7 @@
 """Asynchronous analysis job endpoints."""
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.jobs import AnalysisJob
 from app.services.analysis_runner import run_analysis
@@ -19,9 +19,22 @@ class CreateJobRequest(BaseModel):
         default="main",
         min_length=1,
         max_length=255,
-        pattern=r"^(?!.*\.\.)(?!/)(?!.*//)(?!.*\/$)[A-Za-z0-9_./-]+$",
+        pattern=r"^[A-Za-z0-9_./-]+$",
         description="Git branch, tag, or commit ref",
     )
+
+    @field_validator("ref")
+    @classmethod
+    def validate_ref_segments(cls, value: str) -> str:
+        """Reject path traversal and malformed slash-separated refs."""
+        if (
+            ".." in value
+            or value.startswith("/")
+            or value.endswith("/")
+            or "//" in value
+        ):
+            raise ValueError("ref must not contain traversal or empty path segments")
+        return value
 
 
 @router.post("", response_model=AnalysisJob, status_code=202)
