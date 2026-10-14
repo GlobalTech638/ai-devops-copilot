@@ -96,7 +96,7 @@ def fail_job(job_id: str, error: str) -> AnalysisJob:
 def _safe_error(error: str) -> str:
     """Return a bounded error message without likely credential values."""
     value = str(error)
-    value = re.sub(r"(?i)(token|password|secret|api[_-]?key)=?\\s*[^\\s,;]+", r"\\1=[REDACTED]", value)
+    value = re.sub(r"(?i)(token|password|secret|api[_-]?key)=?\s*[^\s,;]+", r"\1=[REDACTED]", value)
     value = re.sub(r"gh[pousr]_[A-Za-z0-9_]{20,}", "[REDACTED_GITHUB_TOKEN]", value)
     value = re.sub(r"sk-[A-Za-z0-9_-]{16,}", "[REDACTED_API_KEY]", value)
     return value[:300]
