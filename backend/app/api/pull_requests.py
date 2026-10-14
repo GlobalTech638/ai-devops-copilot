@@ -12,13 +12,13 @@ router = APIRouter(prefix="/api/v1/pull-requests", tags=["pull-requests"])
 
 
 class PRReviewRequest(BaseModel):
-    repository: str = Field(min_length=1)
+    repository: str = Field(pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
     pull_request: int = Field(gt=0)
 
 
 class PRPublishRequest(PRReviewRequest):
     # Live publishing requires an explicit head commit SHA. Dry-run remains the default.
-    commit_id: str | None = None
+    commit_id: str | None = Field(default=None, pattern=r"^[0-9a-fA-F]{40}$")
     dry_run: bool = True
 
 
