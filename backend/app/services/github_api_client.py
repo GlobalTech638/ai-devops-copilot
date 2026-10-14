@@ -96,6 +96,8 @@ class GitHubApiClient:
         owner, name = _split_repository(repository)
         if action not in {"COMMENT", "REQUEST_CHANGES", "APPROVE"}:
             raise GitHubApiError("Unsupported GitHub review action")
+        if file_comments and not commit_id:
+            raise GitHubApiError("commit_id (the pull request head SHA) is required for inline comments")
         if not self.token:
             raise GitHubApiError("GITHUB_TOKEN is required to publish a GitHub review")
         comments = []
