@@ -52,3 +52,31 @@ def test_job_survives_store_reinitialization(tmp_path, monkeypatch):
     assert restored.repository == "owner/repo"
     assert restored.ref == "release/v1"
     assert restored.status == JobStatus.QUEUED
+
+
+def test_recovery_marks_interrupted_jobs_failed_and_preserves_completed(tmp_path, monkeypatch):
+    monkeypatch.setenv("JOB_STORE_PATH", str(tmp_path / "recovery.sqlite3"))
+    interrupted = job_store.create_job("owner/repo", "main")
+    job_store.update_job(interrupted.id, JobStatus.ANALYZING, 65)
+
+    completed = job_store.create_job("owner/repo", "release")
+    job_store.save_result(completed.id, AnalysisResult(summary="complete", findings=[]))
+
+    recovered_count = job_store.recover_interrupted_jobs()
+
+    recovered = job_store.get_job(interrupted.id)
+    preserved = job_store.get_job(completed.id)
+    assert recovered_count == 1
+    assert recovered.status == JobStatus.FAILED
+    assert recovered.progress == 100
+    assert "interrupted" in recovered.error.lower()
+    assert preserved.status == JobStatus.COMPLETED
+    assert preserved.result.summary == "complete"
+
+
+def test_recovery_is_idempotent(tmp_path, monkeypatch):
+    monkeypatch.setenv("JOB_STORE_PATH", str(tmp_path / "recovery.sqlite3"))
+    job = job_store.create_job("owner/repo", "main")
+
+    assert job_store.recover_interrupted_jobs() == 1
+    assert job_store.recover_interrupted_jobs() == 0
