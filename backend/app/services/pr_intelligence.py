@@ -46,20 +46,23 @@ def _added_lines(diff: str) -> list[tuple[str, int, str]]:
                 new_line += 1
             elif raw.startswith(" "):
                 new_line += 1
+            # Removed lines do not advance the new-file line counter.
     return added
 
 
 def analyze_diff(diff: str) -> PRAnalysis:
-    """Run deterministic first-pass heuristics and retain precise added-line locations."""
+    """Run deterministic heuristics and never echo possible secret values into evidence."""
     findings: list[PRFinding] = []
-    markers = ("api_" + "key=", "sec" + "ret=", "pass" + "word=", "private_" + "key", "aws_access_" + "key_id")
+    credential_markers = (
+        "api_" + "key", "sec" + "ret", "pass" + "word",
+        "private_" + "key", "aws_access_" + "key_id",
+    )
     for path, line, content in _added_lines(diff):
         lowered = content.lower()
-        if any(marker in lowered for marker in markers):
-            safe_evidence = re.sub(r"(?i)(api_key|secret|password)\s*[:=]\s*([^\s,;]+)", r"\1=[REDACTED]", content)
+        if any(marker in lowered for marker in credential_markers):
             findings.append(PRFinding(
                 "security", "critical", "Possible credential introduced",
-                f"Credential-like content detected on added line: {safe_evidence[:160]}",
+                "Credential-like field detected on this added line; source content is intentionally omitted.",
                 "Remove the exposed value, rotate it if needed, and use a managed secret store.",
                 0.94, path, line,
             ))
