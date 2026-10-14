@@ -3,7 +3,7 @@
 import base64
 import json
 import os
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
@@ -49,6 +49,9 @@ class GitHubApiClient:
             if exc.code == 422:
                 raise GitHubApiError("GitHub rejected the request") from exc
             raise GitHubApiError(f"GitHub API request failed ({exc.code})") from exc
+        except (URLError, TimeoutError) as exc:
+            # Avoid exposing low-level network details in API responses.
+            raise GitHubApiError("GitHub API is temporarily unreachable; retry the request") from exc
 
     def list_tree(self, repository: str, ref: str) -> list[dict]:
         owner, name = _split_repository(repository)
