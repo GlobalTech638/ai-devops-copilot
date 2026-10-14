@@ -63,3 +63,30 @@ def test_publish_route_defaults_to_dry_run(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["dry_run"] is True
+
+
+def test_invalid_repository_identifier_is_rejected_by_request_validation(monkeypatch):
+    def forbidden_client():
+        raise AssertionError("GitHub client must not be called")
+
+    monkeypatch.setattr(pull_requests, "GitHubApiClient", forbidden_client)
+    response = TestClient(app).post(
+        "/api/v1/pull-requests/review/plan",
+        json={"repository": "owner/repo/extra", "pull_request": 3},
+    )
+
+    assert response.status_code == 422
+
+
+def test_invalid_commit_sha_is_rejected_by_request_validation():
+    response = TestClient(app).post(
+        "/api/v1/pull-requests/review/publish",
+        json={
+            "repository": "owner/repo",
+            "pull_request": 3,
+            "commit_id": "not-a-real-sha",
+            "dry_run": False,
+        },
+    )
+
+    assert response.status_code == 422
