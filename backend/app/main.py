@@ -7,6 +7,7 @@ from app.api.analyze import router as analyze_router
 from app.api.health import router as health_router
 from app.api.jobs import router as jobs_router
 from app.api.pull_requests import router as pull_requests_router
+from app.services.job_store import recover_interrupted_jobs
 
 app = FastAPI(
     title="AI DevOps Copilot",
@@ -31,3 +32,9 @@ def health() -> dict[str, str]:
 def root() -> dict[str, str]:
     """Return API identity."""
     return {"name": "AI DevOps Copilot", "version": "0.1.0"}
+
+
+@app.on_event("startup")
+def recover_jobs_on_startup() -> None:
+    """Fail jobs that were interrupted before this process started."""
+    recover_interrupted_jobs()
