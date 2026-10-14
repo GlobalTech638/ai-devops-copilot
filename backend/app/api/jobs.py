@@ -11,8 +11,17 @@ router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
 
 
 class CreateJobRequest(BaseModel):
-    repository: str = Field(min_length=1, description="owner/repository")
-    ref: str = Field(default="main", min_length=1)
+    repository: str = Field(
+        pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+        description="GitHub owner/repository",
+    )
+    ref: str = Field(
+        default="main",
+        min_length=1,
+        max_length=255,
+        pattern=r"^[A-Za-z0-9_./-]+$",
+        description="Git branch, tag, or commit ref",
+    )
 
 
 @router.post("", response_model=AnalysisJob, status_code=202)
