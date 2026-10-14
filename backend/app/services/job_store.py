@@ -1,9 +1,11 @@
 """SQLite-backed persistent job store for the single-node MVP.
 
-Set JOB_STORE_PATH to choose the database file. For larger multi-instance
-deployments, replace this adapter with a managed database or queue-backed store.
+Set JOB_STORE_PATH to a durable database file. The /tmp default is convenient
+for local development only; production deployments must mount persistent storage.
+For multi-instance deployments, use a managed database and durable queue.
 """
 
+from contextlib import closing
 import os
 import re
 import sqlite3
@@ -23,19 +25,24 @@ def _connect() -> sqlite3.Connection:
     if path != ":memory:":
         Path(path).expanduser().parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(path, timeout=10)
-    connection.execute(
-        "CREATE TABLE IF NOT EXISTS analysis_jobs (id TEXT PRIMARY KEY, payload TEXT NOT NULL)"
-    )
+    connection.execute("PRAGMA busy_timeout = 10000")
+    if path != ":memory:":
+        connection.execute("PRAGMA journal_mode = WAL")
+    with connection:
+        connection.execute(
+            "CREATE TABLE IF NOT EXISTS analysis_jobs (id TEXT PRIMARY KEY, payload TEXT NOT NULL)"
+        )
     return connection
 
 
 def _write(job: AnalysisJob) -> None:
-    with _connect() as connection:
-        connection.execute(
-            "INSERT INTO analysis_jobs (id, payload) VALUES (?, ?) "
-            "ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
-            (job.id, job.model_dump_json()),
-        )
+    with closing(_connect()) as connection:
+        with connection:
+            connection.execute(
+                "INSERT INTO analysis_jobs (id, payload) VALUES (?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
+                (job.id, job.model_dump_json()),
+            )
 
 
 def create_job(repository: str, ref: str = "main") -> AnalysisJob:
@@ -46,7 +53,7 @@ def create_job(repository: str, ref: str = "main") -> AnalysisJob:
 
 
 def get_job(job_id: str) -> AnalysisJob | None:
-    with _LOCK, _connect() as connection:
+    with _LOCK, closing(_connect()) as connection:
         row = connection.execute(
             "SELECT payload FROM analysis_jobs WHERE id = ?", (job_id,)
         ).fetchone()
